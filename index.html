@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Unity Web Player | Turbo_BoardGame</title>
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="stylesheet" href="TemplateData/style.css">
+  </head>
+  <body>
+    <!-- Кнопка "Правила" справа зверху -->
+    <button id="rules-btn" title="Правила гри">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="13" fill="#181a1b" stroke="#00c6ff" stroke-width="2"/>
+        <text x="14" y="19" text-anchor="middle" fill="#fff" font-size="16" font-family="Segoe UI, Arial, sans-serif" font-weight="bold">i</text>
+      </svg>
+    </button>
+    <div id="rules-modal">
+      <div id="rules-content">
+        <button id="close-rules">&times;</button>
+        <h2>Правила гри</h2>
+        <ol>
+          <li>Щоб зробити хід, киньте кубик.</li>
+          <li>Кожна клітинка може мати свої унікальні дії або бути нейтральною.</li>
+          <li>Гравець, який першим дійде до кінця поточного кола, отримує можливість перекинути кубик або кинути додатковий кубик із меншою максимальною кількістю ходів.</li>
+          <li>Коли всі доходять до кінця кругу — круг оновлюється.</li>
+          <li>Перемагає той, хто набере найбільшу кількість поінтів!</li>
+          <li>Отримуй поінти кожного раунду, в залежності від важкості проходження цього кола.</li>
+          <li>З кожним новим колом вводиться нове правило, яке може змінити весь хід гри!</li>
+          <li>На полі можуть з’являтися безпечні шляхи — вони виникають випадково (може бути один, два, три або чотири одночасно, всього з 4 варіантів). Але обравши їх, ти можеш втратити бонуси, тому вирішуй: ризикувати чи ні.</li>
+        </ol>
+      </div>
+    </div>
+    <div id="unity-container" class="unity-desktop">
+      <div id="unity-canvas-wrap">
+        <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas> 
+        <button id="fullscreen-fixed-btn" class="fullscreen-button">⛶</button>
+      </div>
+        
+      
+      <div id="unity-loading-bar">
+        <div id="unity-logo"></div>
+        <div id="unity-progress-bar-empty">
+          <div id="unity-progress-bar-full"></div>
+        </div>
+
+    <style>
+      /* Кнопка "Правила" */
+      #rules-btn {
+        position: fixed;
+        top: 24px;
+        right: 32px;
+        z-index: 1001;
+        background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
+        color: #fff;
+        border: none;
+        border-radius: 50%;
+        width: 44px;
+        height: 44px;
+        font-size: 26px;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 2px 8px 0 rgba(0,0,0,0.12);
+        transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+        outline: none;
+      }
+      #rules-btn:hover, #rules-btn:focus {
+        background: linear-gradient(135deg, #0072ff 0%, #00c6ff 100%);
+        box-shadow: 0 4px 16px 0 rgba(0,0,0,0.18);
+        transform: scale(1.08);
+      }
+      /* Модальне вікно */
+      #rules-modal {
+        display: none;
+        position: fixed;
+        z-index: 2000;
+        left: 0; top: 0; right: 0; bottom: 0;
+        width: 100vw; height: 100vh;
+        background: rgba(30, 30, 40, 0.55);
+        justify-content: center;
+        align-items: flex-start;
+        padding-top: 60px;
+      }
+      #rules-content {
+        background: #23283a;
+        color: #fff;
+        border-radius: 18px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        padding: 32px 28px 24px 28px;
+        max-width: 420px;
+        width: 90vw;
+        font-size: 17px;
+        position: relative;
+        animation: rules-pop 0.25s;
+      }
+      @keyframes rules-pop {
+        from { transform: scale(0.92); opacity: 0; }
+        to   { transform: scale(1); opacity: 1; }
+      }
+      #rules-content h2 {
+        margin-top: 0;
+        margin-bottom: 18px;
+        font-size: 1.5em;
+        color: #00c6ff;
+        text-align: center;
+        letter-spacing: 1px;
+      }
+      #rules-content ol {
+        padding-left: 20px;
+        margin: 0;
+      }
+      #rules-content li {
+        margin-bottom: 10px;
+        line-height: 1.5;
+      }
+      #close-rules {
+        position: absolute;
+        top: 12px;
+        right: 16px;
+        background: none;
+        border: none;
+        color: #fff;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+      }
+      #close-rules:hover, #close-rules:focus {
+        opacity: 1;
+        color: #00c6ff;
+      }
+      @media (max-width: 600px) {
+        #rules-content {
+          padding: 18px 6vw 14px 6vw;
+          font-size: 15px;
+        }
+        #rules-btn {
+          top: 12px;
+          right: 10px;
+          width: 38px;
+          height: 38px;
+          font-size: 22px;
+        }
+      }
+      body {
+        padding: 0;
+        margin: 0;
+        position: relative;
+        overflow: hidden;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #232526 0%, #414345 100%);
+        font-family: 'Segoe UI', 'Arial', sans-serif;
+      }
+      #unity-container {
+        position: relative;
+        width: 960px;
+        height: 600px;
+        margin: 40px auto 0 auto;
+        display: block;
+        background: rgba(255,255,255,0.07);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        border-radius: 24px;
+        overflow: visible;
+        border: 1px solid rgba(255,255,255,0.18);
+        backdrop-filter: blur(6px);
+      }
+      #unity-container.unity-desktop {
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        position: fixed;
+      }
+      #unity-canvas-wrap {
+        position: relative;
+        width: 960px;
+        height: 600px;
+        margin: 0 auto;
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px 0 rgba(0,0,0,0.15);
+      }
+      #unity-loading-bar {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        display: none;
+        z-index: 10;
+        background: rgba(30,30,30,0.85);
+        border-radius: 12px;
+        padding: 24px 32px;
+        box-shadow: 0 2px 16px 0 rgba(0,0,0,0.18);
+        min-width: 220px;
+      }
+      #unity-logo {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 12px auto;
+        background: url('unity-logo-title-footer.png') no-repeat center/contain;
+      }
+      #unity-progress-bar-empty {
+        width: 141px;
+        height: 18px;
+        margin-top: 10px;
+        margin-left: 6.5px;
+        background: rgba(255,255,255,0.12);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 1px 4px 0 rgba(0,0,0,0.10);
+      }
+      #unity-progress-bar-full {
+        width: 0%;
+        height: 18px;
+        margin-top: 0;
+        background: linear-gradient(90deg, #00c6ff 0%, #0072ff 100%);
+        border-radius: 8px;
+        transition: width 0.3s;
+      }
+      #unity-warning {
+        position: absolute;
+        left: 50%;
+        top: 5%;
+        transform: translate(-50%);
+        background: #fffbe6;
+        color: #333;
+        padding: 14px 24px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px 0 rgba(0,0,0,0.10);
+        display: none;
+        font-size: 16px;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+      }
+      #unity-footer {
+        position: relative;
+        margin-top: 18px;
+        text-align: center;
+        color: #eee;
+        font-size: 16px;
+        letter-spacing: 1px;
+        text-shadow: 0 1px 4px #222;
+        padding-bottom: 12px;
+        padding-top: 8px;
+        border-radius: 0 0 18px 18px;
+        background: rgba(0,0,0,0.15);
+        font-family: 'Segoe UI', 'Arial', sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+      }
+      .footer-title {
+        font-weight: 600;
+        color: #00c6ff;
+        letter-spacing: 1.5px;
+      }
+      .footer-sep {
+        color: #bbb;
+        font-size: 18px;
+        margin: 0 6px;
+      }
+      .footer-powered {
+        color: #fff;
+        font-weight: 400;
+        opacity: 0.85;
+      }
+      .footer-year {
+        color: #bbb;
+        margin-left: 8px;
+        font-size: 15px;
+        font-weight: 300;
+      }
+      @media (max-width: 1000px) {
+        #unity-container, #unity-canvas-wrap {
+          width: 98vw !important;
+          height: 60vw !important;
+          min-width: 0 !important;
+          min-height: 0 !important;
+          max-width: 100vw !important;
+          max-height: 100vw !important;
+        }
+      }
+      @media (max-width: 700px) {
+        #unity-container, #unity-canvas-wrap {
+          width: 100vw !important;
+          height: 70vw !important;
+        }
+        #unity-footer {
+          font-size: 13px;
+        }
+      }
+    </style>
+
+    <style>
+      #fullscreen-fixed-btn {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        z-index: 1000;
+        background: rgba(0, 0, 0, 0.5); /* Чорний напівпрозорий фон */
+        color: #fff; /* Білий колір символу */
+        border: none; /* Без рамки */
+        border-radius: 50%; /* Кругла форма */
+        width: 50px; /* Розмір кнопки */
+        height: 50px;
+        font-size: 24px; /* Розмір символу */
+        cursor: pointer; /* Курсор у вигляді руки */
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2); /* Легка тінь */
+        opacity: 0.7; /* Прозорість */
+        transition: opacity 0.2s, transform 0.2s; /* Анімація при наведенні */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      #fullscreen-fixed-btn:hover {
+        opacity: 1; /* Зменшення прозорості при наведенні */
+        transform: scale(1.1); /* Легке збільшення */
+      }
+      </style>
+    <!-- ...далі ваші стилі... -->
+    <script>
+      let socket = new WebSocket('ws://localhost:8080');
+
+      socket.onopen = () => {
+          console.log('🔗 WebSocket-зʼєднання встановлено');
+      };
+
+      socket.onmessage = (event) => {
+          const message = JSON.parse(event.data);
+          console.log('📩 Отримано оновлення через WebSocket:', message);
+
+          // Перевіряємо, чи оновлення стосується поточної кімнати
+          const currentRoomCode = sessionStorage.getItem('roomCode');
+          if (message.roomCode === currentRoomCode) {
+              console.log('🔄 Оновлюємо дані кімнати');
+              if (typeof unityInstance !== 'undefined' && unityInstance != null) {
+                  // Створюємо новий обʼєкт з рядком
+                  const playersString = Array.isArray(message.updatedData.players)
+                    ? message.updatedData.players.join(",")
+                    : message.updatedData.players;
+
+                  const payload = JSON.stringify({
+                    RoomCode: message.roomCode,
+                    Players: playersString
+                  }).trim();
+
+                  console.log("📤 Відправляємо ПЕРЕФОРМАТОВАНИЙ JSON в Unity:", payload);
+                  unityInstance.SendMessage('WaitingRoom', 'ReUpdatePlayersList', payload);
+
+              }
+          }
+      };
+
+      socket.onclose = () => {
+          console.log('❌ WebSocket-зʼєднання закрито');
+      };
+
+      socket.onerror = (error) => {
+          console.error('❌ Помилка WebSocket:', error);
+      };
+
+      var canvas = document.querySelector("#unity-canvas");
+
+      function unityShowBanner(msg, type) {
+        var warningBanner = document.querySelector("#unity-warning");
+        function updateBannerVisibility() {
+          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+        }
+        var div = document.createElement('div');
+        div.innerHTML = msg;
+        warningBanner.appendChild(div);
+        if (type == 'error') div.style = 'background: red; padding: 10px;';
+        else {
+          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+          setTimeout(function() {
+            warningBanner.removeChild(div);
+            updateBannerVisibility();
+          }, 5000);
+        }
+        updateBannerVisibility();
+      }
+
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/WebGLBuild.loader.js";
+      var config = {
+        arguments: [],
+        dataUrl: buildUrl + "/WebGLBuild.data",
+        frameworkUrl: buildUrl + "/WebGLBuild.framework.js",
+        codeUrl: buildUrl + "/WebGLBuild.wasm",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "DefaultCompany",
+        productName: "Turbo_BoardGame",
+        productVersion: "1.0",
+        showBanner: unityShowBanner,
+      };
+
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        // Mobile device style: fill the whole browser client area with the game canvas:
+
+        var meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        document.getElementsByTagName('head')[0].appendChild(meta);
+        document.querySelector("#unity-container").className = "unity-mobile";
+        canvas.className = "unity-mobile";
+
+      } else {
+        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
+        canvas.style.width = "100vw";
+        canvas.style.height = "100vh";
+      }
+
+      document.querySelector("#unity-loading-bar").style.display = "block";
+
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+
+      var quit = document.createElement("button");
+      quit.style = "margin-left: 5px; background-color: lightgray; border: none; padding: 5px; cursor: pointer";
+      quit.innerHTML = "Unload";
+      quit.onclick = () => {
+        unityInstance.Quit().then(() => {
+        document.querySelector("#unity-container").remove();
+        canvas = null;
+        script.remove();
+        script = null;
+      });
+    };
+
+      async function saveProgress(json) {
+          console.log("📥 Отримано JSON з Unity:", json);
+          try {
+              const email = sessionStorage.getItem('userEmail') || 'player@example.com';
+              console.log(email);
+              const res = await fetch('/api/save-progress', {
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                      email: email,
+                      gameState: json
+                  })
+              });
+              const data = await res.json();
+              console.log("✅ Сервер відповів:", data);
+          } catch (err) {
+              console.error("❌ Помилка збереження:", err);
+          }
+      }
+
+      // Збережемо unityInstance глобально
+      var unityInstance = null;
+
+      // Після створення unityInstance – збережіть його:
+      script.onload = () => {
+        createUnityInstance(canvas, config, (progress) => {
+          document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
+        }).then((instance) => {
+          unityInstance = instance;
+          document.querySelector("#unity-loading-bar").style.display = "none";
+          sendUserDataToUnity();
+        }).catch((message) => {
+          alert(message);
+        });
+      };
+
+      async function loadProgress() {
+        console.log("🔵 Виклик loadProgress() з Unity");
+        try {
+          const email = sessionStorage.getItem('userEmail') || 'player@example.com';
+          console.log(email);
+          const res = await fetch(`/api/load-progress?email=${encodeURIComponent(email)}`, { method: 'GET' });
+          const data = await res.json();
+          if (res.ok) {
+          console.log("✅ Завантажено дані з сервера:", data);
+          // Передаємо JSON Unity.
+            if(unityInstance) {
+                unityInstance.SendMessage("Circle", "ApplyLoadedState", JSON.stringify(data));
+            } 
+          }else {
+              console.error("unityInstance is undefined");
+              alert(`Для email ${email} збережень не знайдено.`);
+          }
+        } catch (err) {
+          console.error("❌ Помилка завантаження даних:", err);
+        }
+      }
+
+      function sendUserDataToUnity() {
+        var email = sessionStorage.getItem('userEmail') || '';
+        var nickname = sessionStorage.getItem('nickname') || '';
+        if (typeof unityInstance !== 'undefined' && unityInstance != null) {
+          unityInstance.SendMessage('MainMenu', 'SetUserData', email + "|" + nickname);
+        }
+        console.log("📥 Відправлено дані користувача в Unity:", email, nickname);
+      }
+
+      function saveWaitingRoom(roomCode, playersStr) {
+          console.log("📥 Отримано з Unity: roomCode =", roomCode, "players =", playersStr);
+          sessionStorage.setItem('roomCode', roomCode);
+          try {
+              const email = sessionStorage.getItem('userEmail') || 'player@example.com';
+              fetch('/api/save-waiting-room', {
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                      roomCode: roomCode,
+                      players: playersStr,
+                      adminEmail: email
+                  })
+              })
+              .then(res => res.json())
+              .then(data => {
+                  console.log("✅ Сервер відповів (кімната):", data);
+              })
+              .catch(err => {
+                  console.error("❌ Помилка збереження кімнати:", err);
+              });
+          } catch (err) {
+              console.error("❌ Помилка збереження кімнати:", err);
+          }
+      }
+
+      function deleteWaitingRoom(roomCode) {
+          console.log("📥 Отримано запит на видалення кімнати:", roomCode);
+          fetch('/api/delete-room', {
+              method: 'DELETE',
+              headers: {
+                  'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ roomCode: roomCode })
+          })
+          .then(res => res.json())
+          .then(data => {
+              console.log("✅ Сервер відповів (видалення кімнати):", data);
+          })
+          .catch(err => {
+              console.error("❌ Помилка видалення кімнати:", err);
+          });
+      }
+
+      function joinWaitingRoom(roomCode) {
+          console.log("📥 Отримано запит на вхід у кімнату:", roomCode);
+
+          // ✅ Зберігаємо код кімнати для гравця, що приєднується
+          sessionStorage.setItem('roomCode', roomCode);
+
+          fetch(`/api/get-room?roomCode=${encodeURIComponent(roomCode)}`, {
+              method: 'GET',
+              headers: {
+                  'Content-Type': 'application/json'
+              }
+          })
+          .then(res => {
+              if (!res.ok) {
+                  throw new Error(`HTTP помилка! Статус: ${res.status}`);
+              }
+              return res.json();
+          })
+          .then(data => {
+              console.log("✅ Дані кімнати отримано:", data);
+
+            const roomData = {
+            RoomCode: data.RoomCode,
+            Players: data.Players
+            };
+            console.log("roomData", roomData);
+            const jsonData = JSON.stringify(roomData);
+
+            console.log("📤 Відправляємо в Unity:", jsonData);
+            if (typeof unityInstance !== 'undefined' && unityInstance != null) {
+              unityInstance.SendMessage('WaitingRoom', 'LoadRoomData', jsonData);
+            }
+
+              // Додаємо нового гравця до списку
+              const newPlayer = sessionStorage.getItem('nickname') || 'Anonymous';
+              return fetch('/api/update-room-players', {
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                      roomCode: roomCode,
+                      newPlayer: newPlayer
+                  })
+              });
+          })
+          .then(res => {
+              if (!res.ok) {
+                  throw new Error(`HTTP помилка при оновленні списку гравців! Статус: ${res.status}`);
+              }
+              return res.json();
+          })
+          .then(updatedData => {
+              console.log("✅ Список гравців оновлено:", updatedData);
+
+              // Передаємо оновлений список гравців у Unity
+              if (typeof unityInstance !== 'undefined' && unityInstance != null) {
+                  const playersString = Array.isArray(updatedData.players)
+                    ? updatedData.players.join(",")
+                    : updatedData.players;
+
+                  const payload = JSON.stringify({
+                    RoomCode: updatedData.roomCode,
+                    Players: playersString
+                  }).trim();
+
+                  console.log("📤 Відправляємо в Unity:", payload);
+                  unityInstance.SendMessage('WaitingRoom', 'ReUpdatePlayersList', payload);
+
+              }
+          })
+          .catch(err => {
+              console.error("❌ Помилка:", err);
+          });
+      }
+
+      document.body.appendChild(script);
+
+      // Код для модального вікна з правилами
+      document.getElementById('rules-btn').onclick = function() {
+        document.getElementById('rules-modal').style.display = 'flex';
+      };
+      document.getElementById('close-rules').onclick = function() {
+        document.getElementById('rules-modal').style.display = 'none';
+      };
+      // Закриття по кліку поза вікном
+      document.getElementById('rules-modal').onclick = function(e) {
+        if (e.target === this) this.style.display = 'none';
+      };
+
+    function requestGameStart(roomCode) {
+      console.log(`🚀 Unity запитує старт гри для кімнати: ${roomCode}`);
+      fetch('/api/start-game', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomCode: roomCode })
+      })
+      .then(res => res.json())
+      .then(data => console.log('✅ Сигнал старту гри відправлено на сервер:', data))
+      .catch(err => console.error('❌ Помилка при відправці сигналу старту:', err));
+    }
+
+    // Оновлюємо обробник повідомлень WebSocket
+    socket.onmessage = (event) => {
+    try {
+        const message = JSON.parse(event.data);
+        console.log('📩 Отримано WebSocket:', message);
+        const currentRoomCode = sessionStorage.getItem('roomCode');
+
+        if (message.roomCode !== currentRoomCode) return;
+        if (!unityInstance) return;
+
+        switch (message.type) {
+            case 'GAME_STARTED':
+                console.log('🏁 Отримано сигнал старту гри! Викликаємо Unity.');
+                unityInstance.SendMessage('WaitingRoom', 'HandleGameStarted', JSON.stringify(message.data));
+                break;
+            case 'PLAYERS_UPDATED':
+                console.log('🔄 Оновлюємо список гравців');
+                unityInstance.SendMessage('WaitingRoom', 'ReUpdatePlayersList', JSON.stringify(message.data));
+                break;
+                case 'TURN_UPDATED':
+              console.log('🔄 Оновлення ходу! Новий гравець:', message.data.currentPlayerNickname);
+              // ✅ Звертаємось до об'єкта, на якому висить TurnManager
+              // Переконайтесь, що цей об'єкт у сцені Unity називається "TurnManager"
+              unityInstance.SendMessage('GameManager', 'UpdateGameState', message.data.currentPlayerNickname);
+            break;
+            default:
+                console.warn('Невідомий тип повідомлення:', message.type);
+        }
+    } catch (err) {
+        console.error("Помилка обробки WebSocket повідомлення:", err);
+    }
+};
+    
+    function updateCurrentPlayerOnServer(roomCode, nextPlayerNickname) {
+      console.log(`🚀 Unity запитує оновлення ходу для кімнати ${roomCode}. Наступний гравець: ${nextPlayerNickname}`);
+      
+      fetch('/api/game/update-turn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roomCode: roomCode,
+          currentPlayerNickname: nextPlayerNickname // На сервері ми назвали це поле так
+        })
+      })
+      .then(res => res.json())
+      .then(data => console.log('✅ Хід успішно оновлено на сервері:', data))
+      .catch(err => console.error('❌ Помилка оновлення ходу на сервері:', err));
+    }
+
+    function requestGameStart(roomCode, playersJson, boardStateJson) {
+      const players = JSON.parse(playersJson).players;
+      
+      fetch('/api/game/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roomCode: roomCode,
+          players: players,
+          boardState: boardStateJson
+        })
+      })
+      .then(res => res.json())
+      .then(data => console.log('✅ Відповідь від сервера на старт гри:', data))
+      .catch(err => console.error('❌ Помилка запиту на старт гри:', err));
+    }
+    </script>
+
+        <script>
+          document.addEventListener("DOMContentLoaded", function() {
+            var fullscreenButton = document.getElementById('fullscreen-fixed-btn');
+            if (fullscreenButton) {
+              fullscreenButton.onclick = function() {
+                var canvas = document.getElementById('unity-canvas');
+                if (canvas.requestFullscreen) {
+                  canvas.requestFullscreen();
+                } else if (canvas.webkitRequestFullscreen) {
+                  canvas.webkitRequestFullscreen();
+                } else if (canvas.mozRequestFullScreen) {
+                  canvas.mozRequestFullScreen();
+                } else if (canvas.msRequestFullscreen) {
+                  canvas.msRequestFullscreen();
+                }
+              };
+            } else {
+              console.error("Кнопка fullscreen-fixed-btn не знайдена!");
+            }
+          });
+          </script>
+
+<script>
+  window.addEventListener('beforeunload', function (e) {
+    if (typeof unityInstance !== 'undefined' && unityInstance != null) {
+        var roomCode = sessionStorage.getItem('roomCode');
+        if (roomCode) {
+            deleteWaitingRoom(roomCode);
+        }
+    }
+});
+
+</script>
+      
+  </body>
+</html>
